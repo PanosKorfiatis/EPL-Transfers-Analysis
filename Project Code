@@ -1,0 +1,225 @@
+# EPL Transfer Analysis 2000/2001 - 2021/2022
+
+import pandas as pd
+
+import numpy as np
+
+import matplotlib.pyplot as plt
+
+import seaborn as sns
+
+
+#Insert Databases
+
+pl_tables=pd.read_csv(r'C:\Users\pkorf\Desktop\Panos\Python\Project\EPL tables.csv')
+
+pltransfers=pd.read_csv(r'C:\Users\pkorf\Desktop\Panos\Python\Project\premier-league transfers.csv')
+
+#Select 21st century seasons
+
+season21st=["2000/2001","2001/2002","2002/2003","2003/2004","2004/2005","2005/2006","2006/2007","2007/2008","2008/2009","2009/2010","2010/2011","2011/2012","2012/2013","2013/2014","2014/2015","2015/2016","2016/2017","2017/2018","2018/2019","2019/2020","2020/2021","2021/2002"]
+
+pltransfers=pltransfers[pltransfers["season"].isin(season21st)]
+
+#Fill N/A values with 0 and print head
+
+pltransfers=pltransfers.fillna(0)
+
+print(pltransfers.head())
+
+#Select transfer movement in and group by season, drop columns age and year and rename column 'fee cleaned' with 'transfer expenses'
+
+pltransfersin=pltransfers[pltransfers["transfer_movement"]== "in"]
+
+pltransfersin_byseason=pltransfersin.groupby(["season"]).sum()
+
+pltransfersin_byseason= pltransfersin_byseason.drop(columns=["age","year"])
+
+pltransfersin_byseason=pltransfersin_byseason.rename(columns={'fee_cleaned':'transfer_expenses'})
+
+#Produce a graph with expenses for each seaon
+
+fig,ax=plt.subplots()
+ax.plot(pltransfersin_byseason["transfer_expenses"])
+x=["2000/2001","2004/2005","2008/2009","2012/2013","2016/2017","2021/2022"]
+plt.xticks(x, x)
+plt.title("Transfer Expenses Per Season")
+ax.set_xlabel('Season')
+ax.set_ylabel('Total Transfer Expenses')
+plt.show()
+
+#Print maximum spending
+
+print("maximum spending")
+print(pltransfersin_byseason.loc[pltransfersin_byseason['transfer_expenses'] == pltransfersin_byseason['transfer_expenses'].max()])
+
+#Print minimum spending
+
+print("minimum spending")
+print(pltransfersin_byseason.loc[pltransfersin_byseason['transfer_expenses'] == pltransfersin_byseason['transfer_expenses'].min()])
+
+#Print average spending
+
+print("average spending")
+print(pltransfersin_byseason.mean())
+
+#Select transfer movement out and group by season, drop columns age and year and rename column 'fee cleaned' with 'transfer income'
+
+pltransfersout=pltransfers[pltransfers["transfer_movement"]== "out"]
+
+pltransfersout_byseason=pltransfersout.groupby(["season"]).sum()
+
+pltransfersout_byseason= pltransfersout_byseason.drop(columns=["age","year"])
+
+pltransfersout_byseason=pltransfersout_byseason.rename(columns={'fee_cleaned':'transfer_income'})
+
+#Set transfer balance as the merge of playerin_byseason and playersout_by season on season
+
+pltransfers_balance= pltransfersin_byseason.merge(pltransfersout_byseason,on='season')
+
+#set profits as the difference between expenses and income
+
+pltransfers_balance["profits"]=pltransfers_balance["transfer_income"]-pltransfers_balance["transfer_expenses"]
+
+#Produce a graph with profits for each seaon
+
+fig,ax=plt.subplots()
+ax.plot(pltransfers_balance["profits"])
+x=["2000/2001","2004/2005","2008/2009","2012/2013","2016/2017","2021/2022"]
+plt.xticks(x, x)
+plt.title("Profits Per Season")
+ax.set_xlabel('Season')
+ax.set_ylabel('Total Profits')
+plt.show()
+
+#Print maximum profits
+
+print("maximum profits")
+print(pltransfers_balance.loc[pltransfers_balance['profits'] == pltransfers_balance['profits'].max()])
+
+#Group pltransfersout by club, drop columns age and year and rename column 'fee cleaned' with 'transfer income'
+
+pltransfersout_byclub=pltransfersout.groupby(["club_name"]).sum().drop(columns=["age","year"])
+
+pltransfersout_byclub=pltransfersout_byclub.rename(columns={'fee_cleaned':'transfer_income'})
+
+#Group pltransfersin by club, drop columns age and year and rename column 'fee cleaned' with 'transfer income'
+
+pltransfersin_byclub=pltransfersin.groupby(["club_name"]).sum().drop(columns=["age","year"])
+
+pltransfersin_byclub=pltransfersin_byclub.rename(columns={'fee_cleaned':'transfer_expenses'})
+
+#Create a new df as sort pltransfersin_byclub and select top 7 clubs
+
+pltransfersin_byclub_top7 = pltransfersin_byclub.sort_values(by='transfer_expenses',ascending=False)
+
+pltransfersin_byclub_top7 =pltransfersin_byclub_top7 .head(7)
+
+#produce a bar plot with the top 7 spending clubs
+
+fig, ax = plt.subplots(figsize=(12, 8))
+sns.barplot(data=pltransfersin_byclub_top7, x=pltransfersin_byclub_top7.index, y="transfer_expenses")
+plt.title("Top 7 Spending Clubs")
+ax.set_xlabel('Club')
+ax.set_ylabel('Total Transfer Expenses')
+
+#Merge pltransferin_byclub and pltransfersout_by club on name
+
+pltransfers_overview= pltransfersin_byclub.merge(pltransfersout_byclub,on='club_name')
+
+
+#Set profits as income - expenses
+
+pltransfers_overview["profits"]=pltransfers_overview["transfer_income"]-pltransfers_overview["transfer_expenses"]
+
+#create a new df as sort pltransfers_overvuew and select top 7 clubs
+
+pltransfers_overview_top7 = pltransfers_overview.sort_values(by='profits',ascending=False)
+
+pltransfers_overview_top7=pltransfers_overview_top7.head(7)
+
+#produce a bar plot with the top 7 profitable clubs
+
+fig, ax = plt.subplots(figsize=(12, 9))
+sns.barplot(data=pltransfers_overview_top7, x=pltransfers_overview_top7.index, y="profits")
+plt.title("Top 7 Profitable Clubs")
+ax.set_xlabel('Club')
+ax.set_ylabel('Total profits')
+
+#pl_tables_count as count pl apperances, create a dataframe as pl_tables and rename column 'Team with Team Appearances'
+
+pl_tables_count=pl_tables["Team"].value_counts()
+
+
+
+pl_tables_count=pd.DataFrame(pl_tables_count)
+
+pl_tables_count=pl_tables_count.rename(columns={'Team':'Team_Appearances'})
+
+#pl_tables_hist as group pl_tables by club
+
+pl_tables_hist=pl_tables.groupby("Team").sum()
+
+#pl_tables_hist as merge of pl_tables_hist and pl_tables_count
+
+pl_tables_hist=pl_tables_hist.merge(pl_tables_count,left_index=True,right_index=True)
+
+#select columns 'Pts' and 'Team Appearances'
+
+pl_tables_hist=pl_tables_hist[['Pts','Team_Appearances']]
+
+#pl_performance as merge of pl_tables_hist and pltransfers_overview on indexes
+
+pl_performance=pl_tables_hist.merge(pltransfers_overview,left_index=True,right_index=True)
+
+#Print Head and then select the clubs with more or equal than 5 PL appearances
+
+pl_performance.head()
+
+
+
+pl_performance=pl_performance[pl_performance["Team_Appearances"]>=5]
+
+#Create a 'rec_eff' columns as transfer expenses divided by points won
+
+pl_performance['rec_eff']= pl_performance['transfer_expenses']/pl_performance['Pts']
+
+#print the mean of 'rec_eff'
+
+print("the average of millions spent for each point won is ",round(pl_performance['rec_eff'].mean(),6))
+
+pl_performance_corr=pl_performance.drop(columns=["rec_eff","Team_Appearances","transfer_income","profits"])
+
+#print the correlation between points and transfer expenses
+
+print("Correlation between transfer fees and points won")
+print(pl_performance_corr.corr())
+
+
+
+#sort pl_performance by descending orfer and get top 7 performing clubs
+
+pl_performance=pl_performance.sort_values(by='rec_eff', ascending= False)
+
+pl_performance_top7=pl_performance.head(7)
+
+print(pl_performance_top7)
+
+#Produce a scatter diagram of top 7 most effective clubs in recruitment
+
+fig, ax = plt.subplots(figsize=(14, 8))
+plt.title("Top 7 Recruitment Approaches")
+sns.scatterplot(data=pl_performance_top7,x=pl_performance_top7.index, y="rec_eff",s=350)
+
+#sort pl_performance by ascending orfer and get bottom 7 performing clubs
+
+pl_performance_b=pl_performance.sort_values(by='rec_eff', ascending= True)
+
+pl_performance_bottom7=pl_performance_b.head(7)
+
+#Produce a scatter diagram of top 7 less effective clubs in recruitment
+
+fig, ax = plt.subplots(figsize=(14, 8))
+plt.title("Bottom 7 Recruitment Approaches")
+sns.scatterplot(data=pl_performance_bottom7,x=pl_performance_bottom7.index, y="rec_eff",s=350)
+
